@@ -1,0 +1,7 @@
+# Visual Studio fichiers temporaires
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.cache
