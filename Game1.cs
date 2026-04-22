@@ -1,9 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MyNewEngine.Entities;
 using MyNewEngine.Graphics;
 using System.Collections.Generic;
+using System.Net.Mime;
 namespace MyNewEngine;
 
 public class Game1 : Game
@@ -21,6 +23,7 @@ public class Game1 : Game
     private Texture2D _debugTexture;
     private LevelManager levelManager;
     private Texture2D _tilesetTexture;
+    List<Enemy> _enemies = new List<Enemy>();
 
     public Game1()
     {
@@ -31,7 +34,7 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        // Create a big floor
+        //platforms from ldtk
         levelManager = new LevelManager();
         levelManager.LoadLevel("Assets/World.ldtk");
         
@@ -43,12 +46,18 @@ public class Game1 : Game
             _platforms.Add(platform);
         }
 
+        //player
         _player = new Player();
         _player.Position = new Vector2(100, 100);
 
         _target = new Entity();
         _target.Position = new Vector2(400, 300);
         _target.tint = Color.Red;
+
+        //enemy
+        Enemy premierEnnemi = new Enemy();
+        premierEnnemi.Position = new Vector2(100, 100);
+        _enemies.Add(premierEnnemi);
 
         //add camera
         _camera = new Camera2D();
@@ -61,7 +70,13 @@ public class Game1 : Game
         _debugTexture = new Texture2D(GraphicsDevice, 1, 1);
         _debugTexture.SetData(new[] { Color.White });
         _tilesetTexture = Texture2D.FromFile(GraphicsDevice, "Assets/Grass.png");
+        _player.LoadContent(GraphicsDevice);
         Art.Load(GraphicsDevice);
+
+        foreach (Enemy enemy in _enemies)
+        {
+            enemy.LoadContent(_debugTexture);
+        }
     }
 
     protected override void Update(GameTime gameTime)
@@ -71,6 +86,10 @@ public class Game1 : Game
 
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         _player.Update(dt, _platforms);
+        foreach(Enemy enemy in _enemies)
+        {
+            enemy.Update(dt, _platforms);
+        }
         // 1. Shooting Logic (Press F to fire)
         if (Input.IsKeyDown(Keys.Left))
         {
@@ -132,10 +151,15 @@ public class Game1 : Game
             _spriteBatch.Draw(_debugTexture, bulletRect, Color.Yellow);
         }
         _player.Draw(_spriteBatch);
+        foreach (Enemy enemy in _enemies)
+        {
+            enemy.Draw(_spriteBatch);
+        }
 
         // 6. Push the drawing to the monitor
         _spriteBatch.End();
 
         base.Draw(gameTime);
     }
+    
 }

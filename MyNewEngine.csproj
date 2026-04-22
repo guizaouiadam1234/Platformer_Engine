@@ -31,6 +31,15 @@
     <Folder Include="Core\" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="Assets\BananaDash.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\BananaIdle.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\BananaRun.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\Grass.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
