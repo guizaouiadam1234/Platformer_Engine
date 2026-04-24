@@ -22,8 +22,16 @@ namespace MyNewEngine.Entities
         private float _dashTimer = 0f;
         private float _dashCooldownTimer = 0f;
         private const float DASH_DURATION = 0.15f; // Le dash dure 0.15 secondes
-        private const float DASH_COOLDOWN = 1.0f; // Il faut attendre 1 seconde avant de recommencer
+        private const float DASH_COOLDOWN = 0.2f; // Il faut attendre 0.5 seconde avant de recommencer
         private int _facingDirection = 1;
+
+        //mana
+        public float maxMana = 100f;
+        public float currentMana = 100f;
+        public float dashManaCost = 35f;
+        public int manaRegen = 15;
+
+
 
         private float _jumpBufferTimer = 0f;
         private float _coyoteTimer = 0f;
@@ -38,28 +46,42 @@ namespace MyNewEngine.Entities
         private Animation _dashAnim;
         private SpriteEffects _flip = SpriteEffects.None;
 
+        //health and invincibility
+        public int MaxHealth = 5;
+        public int CurrentHealth;
+        private float _invincibleTimer = 0f;
+        private float INVINCIBLE_DURATION = 1.0f;
+
         public override void Update(float dt, List<Entity> platforms)
         {
             // --- 1. TIMERS ---
             _jumpBufferTimer -= dt;
             _coyoteTimer -= dt;
             _dashCooldownTimer -= dt; // On diminue le temps de recharge du dash
+            if (_invincibleTimer > 0) _invincibleTimer -= dt;
 
             if (_isGrounded) _coyoteTimer = COYOTE_TIME;
 
-            // --- 2. INPUT & HORIZONTAL VELOCITY ---
-            // On mémorise la direction même si on est à l'arrêt, pour savoir vers où dasher
+            //mana regen
+            if (currentMana < maxMana)
+            {
+                currentMana += manaRegen * dt;
+                if (currentMana > maxMana) currentMana = maxMana;
+            }
+
+            //direction faced
             if (Input.IsKeyDown(Keys.Left)) _facingDirection = -1;
             if (Input.IsKeyDown(Keys.Right)) _facingDirection = 1;
 
-            // --- 3. DÉCLENCHEMENT DU DASH (Touche X) ---
-            if (Input.HasBeenPressed(Keys.X) && _dashCooldownTimer <= 0 && !_isDashing)
+            // x for dash, c for jump, z for bullets
+            if (Input.HasBeenPressed(Keys.X) && _dashCooldownTimer <= 0 && !_isDashing && currentMana >= dashManaCost)
             {
                 _isDashing = true;
                 _dashTimer = DASH_DURATION;
+                currentMana -= dashManaCost;
             }
 
-            // --- 4. LOGIQUE DE DÉPLACEMENT ---
+            
             if (_isDashing)
             {
                 // PENDANT LE DASH : On va super vite, et on annule la gravité !
@@ -98,7 +120,7 @@ namespace MyNewEngine.Entities
             // --- 5. GESTION DE L'ANIMATION ---
             if (_isDashing)
             {
-        _currentAnim = _dashAnim; // Priorité au Dash !
+                _currentAnim = _dashAnim; // Priorité au Dash !
             }
             else if (Math.Abs(Velocity.X) > 0.1f)
             {
@@ -171,16 +193,53 @@ namespace MyNewEngine.Entities
             // On met 1 pour le frameCount. Le temps (0.1f) n'a pas d'importance puisqu'il n'y a qu'une image !
             _dashAnim = new Animation(dashTexture, 1, 0.1f);
 
-            
+            CurrentHealth=MaxHealth;
+
+
         }
         public override void Draw(SpriteBatch spriteBatch)
         {
             if (_currentAnim != null)
             {
-                // On dessine l'animation actuelle au lieu d'un rectangle blanc
-                _currentAnim.Draw(spriteBatch, Position, _flip);
+                Color tintColor = Color.White;
+                if (_invincibleTimer > 0)
+                {
+                    tintColor = Color.Red;
+                    if ((int)(_invincibleTimer * 15) % 2 == 0)
+                    {
+                        _currentAnim.Draw(spriteBatch, Position, _flip, tintColor);
+                    }
+                }
+                else
+                {
+                    tintColor= Color.White;
+                    _currentAnim.Draw(spriteBatch, Position, _flip, tintColor);
+                }
             }
         }
-    }
-        
+        public void TakeDamage(int damage)
+        {
+            if (_invincibleTimer <= 0)
+            {
+                CurrentHealth -= damage;
+                if (CurrentHealth < 0) CurrentHealth = 0;
+                // Lancement de l'invincibilité
+                _invincibleTimer = INVINCIBLE_DURATION;
+                //knockback animation
+                Velocity.X = -JumpForce * _facingDirection * 0.5f; // Recul horizontal
+                Velocity.Y = JumpForce*0.5f; // Recul horizontal
+                                             // Si on n'a plus de vie, on réapparaît au point de départ (pour le moment)
+                if (CurrentHealth <= 0)
+                {
+                    CurrentHealth = MaxHealth;
+                    Position = new Vector2(100, 100);
+                    Velocity = Vector2.Zero;
+                }
+            }
+            else
+            {
+                return; // Le joueur est invincible, on ignore les dégâts
+            }
+        }
+    }     
 }

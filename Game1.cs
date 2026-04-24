@@ -24,6 +24,7 @@ public class Game1 : Game
     private LevelManager levelManager;
     private Texture2D _tilesetTexture;
     List<Enemy> _enemies = new List<Enemy>();
+    private Texture2D heartTexture;
 
     public Game1()
     {
@@ -55,9 +56,11 @@ public class Game1 : Game
         _target.tint = Color.Red;
 
         //enemy
+        
         Enemy premierEnnemi = new Enemy();
         premierEnnemi.Position = new Vector2(100, 100);
         _enemies.Add(premierEnnemi);
+        
 
         //add camera
         _camera = new Camera2D();
@@ -70,12 +73,14 @@ public class Game1 : Game
         _debugTexture = new Texture2D(GraphicsDevice, 1, 1);
         _debugTexture.SetData(new[] { Color.White });
         _tilesetTexture = Texture2D.FromFile(GraphicsDevice, "Assets/Grass.png");
+        heartTexture = Texture2D.FromFile(GraphicsDevice, "Assets/Heart.png");
+
         _player.LoadContent(GraphicsDevice);
         Art.Load(GraphicsDevice);
-
+        Texture2D toasterTex = Texture2D.FromFile(GraphicsDevice, "Assets/Toaster.png");
         foreach (Enemy enemy in _enemies)
         {
-            enemy.LoadContent(_debugTexture);
+            enemy.LoadContent(toasterTex);
         }
     }
 
@@ -122,7 +127,41 @@ public class Game1 : Game
                 _bullets.RemoveAt(i);
             }
         }
+        // --- 3. COLLISIONS: BALLES vs ENNEMIS ---
+        // On lit la liste des balles à l'envers (important pour pouvoir les supprimer sans faire crasher le jeu)
+        for (int i = _bullets.Count - 1; i >= 0; i--)
+        {
+            bool bulletHit = false;
+
+            // On crée un faux rectangle pour la balle actuelle (car ta classe Bullet n'a pas encore de Bounds)
+            Rectangle bulletRect = new Rectangle((int)_bullets[i].Position.X, (int)_bullets[i].Position.Y, 10, 5);
+
+            // On vérifie cette balle contre TOUS les ennemis
+            for (int j = _enemies.Count - 1; j >= 0; j--)
+            {
+                if (bulletRect.Intersects(_enemies[j].Bounds))
+                {
+                    // BOOM ! La balle touche le grille-pain !
+                    _enemies.RemoveAt(j); // On supprime l'ennemi
+                    bulletHit = true;     // On note que la balle a touché
+                    break;                // On arrête de vérifier les autres ennemis pour cette balle
+                }
+            }
+
+            // Si la balle a touché quelque chose, on la supprime aussi
+            if (bulletHit)
+            {
+                _bullets.RemoveAt(i);
+            }
+        }
         _camera.Follow(_player.Position, 800, 480);
+
+        foreach(Enemy enemy in _enemies)
+        {
+            if (_player.Bounds.Intersects(enemy.Bounds)){
+                _player.TakeDamage(1);
+            }
+        }
     }
 
     protected override void Draw(GameTime gameTime)
@@ -157,6 +196,24 @@ public class Game1 : Game
         }
 
         // 6. Push the drawing to the monitor
+        _spriteBatch.End();
+
+        _spriteBatch.Begin();
+        for(int i = 0; i < _player.CurrentHealth; i++)
+        {
+            _spriteBatch.Draw(heartTexture, new Vector2(10 + i * 34, 10), Color.White);
+        }
+
+        Vector2 manaBarPosition = new Vector2(15, 50);
+        int maxBarWidth = 200;
+        int barHeight = 20;
+
+        Rectangle manaBg = new Rectangle((int)manaBarPosition.X, (int)manaBarPosition.Y, (int)(maxBarWidth * (_player.currentMana / _player.maxMana)), barHeight);
+        _spriteBatch.Draw(_debugTexture, manaBg, Color.Blue);
+        int curretBarWidth = (int)(maxBarWidth * (_player.currentMana / _player.maxMana));
+        Rectangle manaFg = new Rectangle((int)manaBarPosition.X, (int)manaBarPosition.Y, curretBarWidth, barHeight);
+        _spriteBatch.Draw(_debugTexture, manaFg, Color.Cyan);
+
         _spriteBatch.End();
 
         base.Draw(gameTime);

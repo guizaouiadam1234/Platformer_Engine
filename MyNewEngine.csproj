@@ -43,6 +43,12 @@
     <None Update="Assets\Grass.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Assets\Heart.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Toaster.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Assets\World.ldtk">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

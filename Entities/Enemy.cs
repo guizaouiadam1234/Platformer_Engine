@@ -1,68 +1,80 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MyNewEngine.Graphics; // On ajoute ça pour accéder à la classe Animation
 using System.Collections.Generic;
-
-
 
 namespace MyNewEngine.Entities
 {
     public class Enemy : Entity
     {
-        public float speed = 100f;
-        public float gravity = 1200f;
-        public Vector2 velocity;
-        public int direction = 1;
+        public float Speed = 100f;
+        public float Gravity = 1200f;
+        public Vector2 Velocity;
+        public int Direction = 1; // 1 = droite, -1 = gauche
 
-
-        private Texture2D _texture;
+        // --- Nouvelles variables d'animation ---
+        private Animation _walkAnim;
+        private SpriteEffects _flip = SpriteEffects.None;
 
         public void LoadContent(Texture2D texture)
         {
-            _texture = texture;
-            Size = new Vector2(32, 32);
+            // On découpe ton image en 2 frames !
+            _walkAnim = new Animation(texture, 2, 0.15f);
 
-
+            // On calcule la taille physique (Size) de l'ennemi en fonction d'UNE SEULE frame
+            Size = new Vector2(texture.Width / 2, texture.Height);
         }
+
         public override void Update(float dt, List<Entity> platforms)
         {
-            velocity.Y += gravity * dt;
-            velocity.X = speed * direction;
+            
+            Velocity.Y += Gravity * dt;
+            Velocity.X = Speed * Direction;
 
-            Position.Y += velocity.Y * dt;
+            
+            _walkAnim.Update(dt);
+            
+            _flip = Direction == 1 ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
+
+            // --- COLLISIONS Y ---
+            Position.Y += Velocity.Y * dt;
             foreach (var platform in platforms)
             {
-                if (Bounds.Intersects(platform.Bounds))
+                if (this.Bounds.Intersects(platform.Bounds))
                 {
-                    Position.Y = platform.Bounds.Top - Size.Y;
-                    velocity.Y = 0;
+                    if (Velocity.Y > 0)
+                    {
+                        Position.Y = platform.Bounds.Top - this.Bounds.Height;
+                        Velocity.Y = 0;
+                    }
                 }
             }
 
-            Position.X += velocity.X * dt;
+            // --- COLLISIONS X ---
+            Position.X += Velocity.X * dt;
             foreach (var platform in platforms)
             {
-                if (Bounds.Intersects(platform.Bounds))
+                if (this.Bounds.Intersects(platform.Bounds))
                 {
-                    if (velocity.X > 0)
+                    if (Velocity.X > 0)
                     {
-                        Position.X = platform.Bounds.Left - Size.X;
-                        direction = -1;
+                        Position.X = platform.Bounds.Left - this.Bounds.Width;
+                        Direction = -1; 
                     }
-                    else
+                    else if (Velocity.X < 0)
                     {
                         Position.X = platform.Bounds.Right;
-                        direction = 1;
+                        Direction = 1; 
                     }
                 }
-
             }
         }
+
         public override void Draw(SpriteBatch spriteBatch)
         {
-            if (_texture != null)
+            if (_walkAnim != null)
             {
-                // On le dessine en rouge pour bien le voir !
-                spriteBatch.Draw(_texture, this.Bounds, Color.Red);
+                _walkAnim.Draw(spriteBatch, Position, _flip, Color.White);
             }
         }
     }

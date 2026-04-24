@@ -41,10 +41,10 @@ namespace MyNewEngine.Graphics
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, Vector2 position, SpriteEffects flip)
+        public void Draw(SpriteBatch spriteBatch, Vector2 position, SpriteEffects flip, Color tint)
         {
             Rectangle sourceRect = new Rectangle(_currentFrame * _framewidth, 0, _framewidth, _frameheight);
-            spriteBatch.Draw(_texture, position, sourceRect, Color.White, 0f, Vector2.Zero, 1f, flip, 0f);
+            spriteBatch.Draw(_texture, position, sourceRect, tint, 0f, Vector2.Zero, 1f, flip, 0f);
         }
     }
 }
