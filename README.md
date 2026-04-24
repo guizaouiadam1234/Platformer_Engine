@@ -130,9 +130,9 @@ If you rename the LDtk file or change layer names, you will need to update the c
 
 ## Current Gameplay Notes
 
-- The player starts at `(100, 100)`.
+- The player starts at `(-2, 96)`.
 - One enemy is spawned near the player at startup.
-- If the player loses all health, they are reset to full health and moved back to `(100, 100)`.
+- If the player loses all health, they are reset to full health and moved back to `(-2, 96)`.
 
 ---
 
