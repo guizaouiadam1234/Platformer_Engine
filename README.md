@@ -1,102 +1,141 @@
 # MyNewEngine
 
-A 2D game engine and platformer built with **MonoGame** and **.NET 9**, featuring physics-based player movement, tile-based level loading via **LDtk**, a 2D camera system, parallax backgrounds, and a bullet/shooting system.
+A small 2D platformer project built with **MonoGame DesktopGL** and **.NET 9**. The current game setup includes a player with movement, jumping, dashing, shooting, a following camera, LDtk-based level loading, a simple enemy, and a basic HUD for health and mana.
 
 ---
 
-## Features
+## Current Features
 
-- **Entity System** — Base `Entity` class with position, tint, size and bounds. Easily extendable for any game object.
-- **Player Controller** — Smooth platformer movement with:
-  - Horizontal movement & gravity
-  - Jump buffering (0.15s) and coyote time (0.15s)
-  - Axis-separated AABB collision resolution
-- **Bullet System** — Shootable projectiles managed as entities.
-- **LDtk Level Loading** — Loads `.ldtk` world files, parses `Collisions` (IntGrid) and `Tiles` layers to generate solid colliders and visual tiles at runtime.
-- **Camera2D** — Smooth follow camera with zoom support and a `Matrix` transform for `SpriteBatch`.
-- **Parallax Layers** — Multi-layer parallax scrolling background renderer with configurable scroll factors.
-- **Input Manager** — Centralized keyboard input with `IsKeyDown` and `HasBeenPressed` helpers.
+- **Player controller**
+  - Left/right movement
+  - Gravity-based jumping
+  - Jump buffering and coyote time
+  - Dash ability with mana cost and cooldown
+- **Combat**
+  - Bullets fire in the last faced horizontal direction
+  - Bullets are removed on wall hit or enemy hit
+- **Enemy**
+  - Simple walking enemy that patrols and turns around on collision
+  - Contact damage with temporary player invincibility
+- **HUD**
+  - Heart-based health display
+  - Mana bar with regeneration
+- **Level loading**
+  - Loads `Assets\World.ldtk`
+  - Reads the first LDtk level in the file
+  - Uses the `Collisions` layer for solid tiles
+  - Uses the `Visuals` layer for rendered tiles
+- **Rendering helpers**
+  - `Camera2D` follow camera
+  - Sprite animation helper
+  - Base `Entity` class with bounds-based collision
+
+---
+
+## Tech Stack
+
+- **.NET 9**
+- **MonoGame.Framework.DesktopGL 3.8.\***
+- **MonoGame.Content.Builder.Task 3.8.\***
+- **MonoGame.Extended 5.4.0**
 
 ---
 
 ## Project Structure
 
-```
+```text
 MyNewEngine/
-├── Assets/                  # Game assets (LDtk world, tilesets, sprites)
-│   ├── World.ldtk
-│   └── Grass.png
-├── Entities/
-│   ├── Entity.cs            # Base entity class
-│   ├── Player.cs            # Platformer player controller
-│   └── Bullet.cs            # Projectile entity
-├── Graphics/
-│   ├── Art.cs               # Centralized texture/asset loader
-│   ├── Camera2D.cs          # 2D follow camera
-│   └── ParallaxLayer.cs     # Parallax background layer
-├── Input/
-│   └── Input.cs             # Keyboard input manager
-├── Levels/
-│   ├── LdtkData.cs          # LDtk JSON deserialization models
-│   └── LevelManager.cs      # Level loader (colliders + visual tiles)
-├── Game1.cs                 # Main game loop
-├── Program.cs               # Entry point
-└── MyNewEngine.csproj
+|-- Assets/                    # PNG sprites, LDtk world, source art files
+|-- Content/
+|   `-- Content.mgcb           # MonoGame content project
+|-- Entities/
+|   |-- Bullet.cs
+|   |-- Enemy.cs
+|   |-- Entity.cs
+|   `-- Player.cs
+|-- Graphics/
+|   |-- Animation.cs
+|   |-- Art.cs
+|   |-- Camera2D.cs
+|   `-- ParallaxLayer.cs
+|-- Input/
+|   `-- Input.cs
+|-- Levels/
+|   |-- LdtkData.cs
+|   `-- LevelManager.cs
+|-- Game1.cs
+|-- Program.cs
+`-- MyNewEngine.csproj
 ```
+
+> `ParallaxLayer.cs` exists in the project, but it is not currently used by `Game1`.
 
 ---
 
-## Requirements
+## Assets Used at Runtime
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [MonoGame 3.8+](https://www.monogame.net/)
-- [LDtk](https://ldtk.io/) *(for editing levels)*
+The game currently loads textures directly from the `Assets\` folder with `Texture2D.FromFile(...)`.
+
+- `Assets\BananaIdle.png`
+- `Assets\BananaRun.png`
+- `Assets\BananaDash.png`
+- `Assets\Toaster.png`
+- `Assets\Grass.png`
+- `Assets\Heart.png`
+- `Assets\World.ldtk`
+
+These files are configured in the project file to copy to the output directory.
 
 ---
 
 ## Getting Started
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd MyNewEngine
-   ```
+1. Clone the repository.
+2. Restore packages:
 
-2. **Restore dependencies**
-   ```bash
+   ```powershell
    dotnet restore
    ```
 
-3. **Run the project**
-   ```bash
-   dotnet run
+3. Run the game:
+
+   ```powershell
+   dotnet run --project .\MyNewEngine.csproj
    ```
 
 ---
 
 ## Controls
 
-| Key         | Action        |
-|-------------|---------------|
-| `Left`      | Move left     |
-| `Right`     | Move right    |
-| `C`         | Jump          |
-| `F`         | Shoot         |
+| Key | Action |
+| --- | --- |
+| `Left Arrow` | Move left |
+| `Right Arrow` | Move right |
+| `C` | Jump |
+| `X` | Dash |
+| `W` | Shoot |
 
 ---
 
-## Level Editing
+## LDtk Notes
 
-Levels are created with [LDtk](https://ldtk.io/) and saved as `.ldtk` files under `Assets/`.
+- The level file path is hardcoded in `Game1.cs` as `Assets/World.ldtk`.
+- `LevelManager` currently loads only the first level in the LDtk world.
+- Collision tiles come from the `Collisions` int grid.
+- Rendered tiles come from the `Visuals` layer and use `Assets\Grass.png`.
 
-The `LevelManager` reads:
-- **`Collisions`** IntGrid layer → generates solid `Rectangle` colliders used for physics.
-- **`Tiles`** layer → generates `LevelTile` structs (source + destination rects) rendered against the tileset texture (`Grass.png`).
+If you rename the LDtk file or change layer names, you will need to update the code.
 
-To add a new level, create a level in LDtk and update the path passed to `levelManager.LoadLevel(...)` in `Game1.cs`.
+---
+
+## Current Gameplay Notes
+
+- The player starts at `(100, 100)`.
+- One enemy is spawned near the player at startup.
+- If the player loses all health, they are reset to full health and moved back to `(100, 100)`.
 
 ---
 
 ## License
 
-This project is open source. Feel free to use it as a learning resource or a starting point for your own MonoGame projects.
+There is currently no license file in this repository.
