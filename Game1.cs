@@ -4,8 +4,10 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MyNewEngine.Entities;
 using MyNewEngine.Graphics;
+using System;
 using System.Collections.Generic;
 using System.Net.Mime;
+using static System.Net.Mime.MediaTypeNames;
 namespace MyNewEngine;
 
 public class Game1 : Game
@@ -25,6 +27,14 @@ public class Game1 : Game
     private Texture2D _tilesetTexture;
     List<Enemy> _enemies = new List<Enemy>();
     private Texture2D heartTexture;
+
+    //collectibles
+     List<Collectible> _collectibles = new List<Collectible>();
+    private Texture2D _coinTexture;
+    private Texture2D _manaTexture;
+
+    //font for text
+    SpriteFont font1;
 
     public Game1()
     {
@@ -49,7 +59,7 @@ public class Game1 : Game
 
         //player
         _player = new Player();
-        _player.Position = new Vector2(100, 100);
+        _player.Position = new Vector2(-2, 96);
 
         _target = new Entity();
         _target.Position = new Vector2(400, 300);
@@ -82,6 +92,17 @@ public class Game1 : Game
         {
             enemy.LoadContent(toasterTex);
         }
+        // Charge tes images (ajoute les noms exacts de tes fichiers png)
+        _coinTexture = Texture2D.FromFile(GraphicsDevice, "Assets/Coin.png");
+        _manaTexture = Texture2D.FromFile(GraphicsDevice, "Assets/Mana.png");
+
+        // Faisons apparaître un objet de chaque type pour tester :
+        _collectibles.Add(new Collectible(new Vector2(190, 125), CollectibleType.Coin, _coinTexture));
+        _collectibles.Add(new Collectible(new Vector2(240, 100), CollectibleType.Mana, _manaTexture));
+        _collectibles.Add(new Collectible(new Vector2(300, 75), CollectibleType.Health, heartTexture));
+
+        //font for text
+        font1 = Content.Load<SpriteFont>("MyFont");
     }
 
     protected override void Update(GameTime gameTime)
@@ -133,7 +154,7 @@ public class Game1 : Game
         {
             bool bulletHit = false;
 
-            // On crée un faux rectangle pour la balle actuelle (car ta classe Bullet n'a pas encore de Bounds)
+            // On crée un faux rectangle pour la balle actuelle (car la classe Bullet n'a pas encore de Bounds)
             Rectangle bulletRect = new Rectangle((int)_bullets[i].Position.X, (int)_bullets[i].Position.Y, 10, 5);
 
             // On vérifie cette balle contre TOUS les ennemis
@@ -142,17 +163,28 @@ public class Game1 : Game
                 if (bulletRect.Intersects(_enemies[j].Bounds))
                 {
                     // BOOM ! La balle touche le grille-pain !
-                    _enemies.RemoveAt(j); // On supprime l'ennemi
-                    bulletHit = true;     // On note que la balle a touché
-                    break;                // On arrête de vérifier les autres ennemis pour cette balle
+                    _enemies.RemoveAt(j);
+                    bulletHit = true;     
+                    break;                
                 }
             }
 
-            // Si la balle a touché quelque chose, on la supprime aussi
             if (bulletHit)
             {
                 _bullets.RemoveAt(i);
             }
+        }
+        //collisions with collectible
+        for (int i = _collectibles.Count - 1; i >= 0; i--)
+        {
+            Rectangle collectibleRect = new Rectangle((int)_collectibles[i].Position.X, (int)_collectibles[i].Position.Y, 10, 5);
+            if (_player.Bounds.Intersects(collectibleRect))
+            {
+                _collectibles[i].applyEffect(_player);
+                _collectibles.RemoveAt(i);
+
+            }
+
         }
         _camera.Follow(_player.Position, 800, 480);
 
@@ -190,9 +222,13 @@ public class Game1 : Game
             _spriteBatch.Draw(_debugTexture, bulletRect, Color.Yellow);
         }
         _player.Draw(_spriteBatch);
+        System.Diagnostics.Debug.WriteLine(_player.Position);
         foreach (Enemy enemy in _enemies)
         {
             enemy.Draw(_spriteBatch);
+        }
+        foreach(Collectible collectible in _collectibles)   {
+            collectible.Draw(_spriteBatch);
         }
 
         // 6. Push the drawing to the monitor
@@ -213,6 +249,12 @@ public class Game1 : Game
         int curretBarWidth = (int)(maxBarWidth * (_player.currentMana / _player.maxMana));
         Rectangle manaFg = new Rectangle((int)manaBarPosition.X, (int)manaBarPosition.Y, curretBarWidth, barHeight);
         _spriteBatch.Draw(_debugTexture, manaFg, Color.Cyan);
+
+
+        Vector2 coinSymbolPosition = new Vector2(15, 80);
+        _spriteBatch.Draw(_coinTexture, coinSymbolPosition, Color.White);
+        _spriteBatch.DrawString(font1, "x " + _player.coins, new Vector2(50, 80), Color.White);
+
 
         _spriteBatch.End();
 

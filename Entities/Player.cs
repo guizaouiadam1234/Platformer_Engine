@@ -4,7 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using MyNewEngine.Graphics;
 using System;
 using System.Collections.Generic;
-using Microsoft.Xna.Framework.Content;
 
 namespace MyNewEngine.Entities
 {
@@ -31,8 +30,10 @@ namespace MyNewEngine.Entities
         public float dashManaCost = 35f;
         public int manaRegen = 15;
 
+        //money
+        public int coins = 0;
 
-
+        //jump buffer
         private float _jumpBufferTimer = 0f;
         private float _coyoteTimer = 0f;
         private const float JUMP_BUFFER_TIME = 0.15f;
