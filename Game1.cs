@@ -6,9 +6,10 @@ using MyNewEngine.Entities;
 using MyNewEngine.Graphics;
 using System;
 using System.Collections.Generic;
-using System.Net.Mime;
-using static System.Net.Mime.MediaTypeNames;
 namespace MyNewEngine;
+using ImGuiNET;
+using ImGuiNET.SampleProgram.XNA;
+using MyNewEngine.Graphics;
 
 public class Game1 : Game
 {
@@ -33,6 +34,11 @@ public class Game1 : Game
     private Texture2D _coinTexture;
     private Texture2D _manaTexture;
 
+    //gui
+    private ImGuiRenderer _imGuiRenderer;
+    private RenderTarget2D _sceneRenderTarget;
+    private IntPtr _sceneTextureId;
+
     //font for text
     SpriteFont font1;
 
@@ -41,10 +47,17 @@ public class Game1 : Game
         _graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
+
+        // --- CHANGER LA TAILLE DE LA FENÊTRE ---
+        _graphics.PreferredBackBufferWidth = 1280; // Largeur
+        _graphics.PreferredBackBufferHeight = 720; // Hauteur
+        _graphics.ApplyChanges(); // On applique les modifications !
     }
 
     protected override void Initialize()
     {
+        //scene render target for imGui
+        _sceneRenderTarget = new RenderTarget2D(GraphicsDevice, 1280, 720);
         //platforms from ldtk
         levelManager = new LevelManager();
         levelManager.LoadLevel("Assets/World.ldtk");
@@ -75,10 +88,16 @@ public class Game1 : Game
         //add camera
         _camera = new Camera2D();
         base.Initialize();
+
+
     }
 
     protected override void LoadContent()
     {
+        //gui
+        _imGuiRenderer = new ImGuiRenderer(this);
+        _imGuiRenderer.RebuildFontAtlas();
+
         _spriteBatch = new SpriteBatch(GraphicsDevice);
         _debugTexture = new Texture2D(GraphicsDevice, 1, 1);
         _debugTexture.SetData(new[] { Color.White });
@@ -198,67 +217,80 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        // 1. Wipe the screen clean every frame
+        // =======================================================
+        // TEMPS 1 : ON DESSINE LE JEU DANS NOTRE "FAUX ECRAN" (La Vue Scène)
+        // =======================================================
+        GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        // 2. Open the paintbrush (NO CAMERA YET - just raw drawing)
-        _spriteBatch.Begin(transformMatrix : _camera.Transform);
+        // --- DESSIN DU MONDE (AVEC CAMERA) ---
+        _spriteBatch.Begin(transformMatrix: _camera.Transform);
 
-        // --- DRAW THE ART ---
         if (levelManager != null && levelManager.VisualTiles != null)
         {
             foreach (LevelTile tile in levelManager.VisualTiles)
             {
-               //draw grass tile
                 _spriteBatch.Draw(_tilesetTexture, tile.DestinationRect, tile.SourceRect, Color.White);
             }
         }
-
-        
-
-        
-        foreach(Bullet bullet in _bullets){
-            Rectangle bulletRect  = new Rectangle((int)bullet.Position.X, (int)bullet.Position.Y, 10, 5);
+        foreach (Bullet bullet in _bullets)
+        {
+            Rectangle bulletRect = new Rectangle((int)bullet.Position.X, (int)bullet.Position.Y, 10, 5);
             _spriteBatch.Draw(_debugTexture, bulletRect, Color.Yellow);
         }
         _player.Draw(_spriteBatch);
-        System.Diagnostics.Debug.WriteLine(_player.Position);
-        foreach (Enemy enemy in _enemies)
-        {
-            enemy.Draw(_spriteBatch);
-        }
-        foreach(Collectible collectible in _collectibles)   {
-            collectible.Draw(_spriteBatch);
-        }
-
-        // 6. Push the drawing to the monitor
+        foreach (Enemy enemy in _enemies) { enemy.Draw(_spriteBatch); }
+        foreach (Collectible collectible in _collectibles) { collectible.Draw(_spriteBatch); }
         _spriteBatch.End();
 
+        // --- DESSIN DE L'INTERFACE JOUEUR (SANS CAMERA) ---
         _spriteBatch.Begin();
-        for(int i = 0; i < _player.CurrentHealth; i++)
+        for (int i = 0; i < _player.CurrentHealth; i++)
         {
             _spriteBatch.Draw(heartTexture, new Vector2(10 + i * 34, 10), Color.White);
         }
-
         Vector2 manaBarPosition = new Vector2(15, 50);
-        int maxBarWidth = 200;
-        int barHeight = 20;
-
+        int maxBarWidth = 200; int barHeight = 20;
         Rectangle manaBg = new Rectangle((int)manaBarPosition.X, (int)manaBarPosition.Y, (int)(maxBarWidth * (_player.currentMana / _player.maxMana)), barHeight);
         _spriteBatch.Draw(_debugTexture, manaBg, Color.Blue);
         int curretBarWidth = (int)(maxBarWidth * (_player.currentMana / _player.maxMana));
         Rectangle manaFg = new Rectangle((int)manaBarPosition.X, (int)manaBarPosition.Y, curretBarWidth, barHeight);
         _spriteBatch.Draw(_debugTexture, manaFg, Color.Cyan);
 
-
         Vector2 coinSymbolPosition = new Vector2(15, 80);
         _spriteBatch.Draw(_coinTexture, coinSymbolPosition, Color.White);
         _spriteBatch.DrawString(font1, "x " + _player.coins, new Vector2(50, 80), Color.White);
-
-
         _spriteBatch.End();
 
+
+        // =======================================================
+        // TEMPS 2 : ON DESSINE L'ÉDITEUR SUR LE VRAI ÉCRAN
+        // =======================================================
+        GraphicsDevice.SetRenderTarget(null); // Retour au vrai écran
+        GraphicsDevice.Clear(new Color(40, 44, 52)); // Fond gris foncé pro
+
+        _imGuiRenderer.BeforeLayout(gameTime);
+
+        // --- FENÊTRE 1 : L'INSPECTEUR ---
+        ImGui.Begin("Inspecteur");
+        ImGui.Text("--- Parametres du Joueur ---");
+        ImGui.SliderFloat("Vitesse", ref _player.Speed, 50f, 1000f);
+        ImGui.SliderFloat("Force de Saut", ref _player.JumpForce, -1500f, -200f);
+        ImGui.SliderFloat("Gravite", ref _player.Gravity, 100f, 3000f);
+        ImGui.Separator();
+        ImGui.Text("Pieces recoltees : " + _player.coins);
+        if (ImGui.Button("Soigner Banana Man")) { _player.CurrentHealth = _player.MaxHealth; }
+        ImGui.End();
+
+        // --- FENÊTRE 2 : LA VUE SCÈNE ---
+        ImGui.Begin("Vue Scene (Le Jeu)");
+        // On donne notre faux écran à ImGui pour qu'il l'affiche comme une image
+        _sceneTextureId = _imGuiRenderer.BindTexture(_sceneRenderTarget);
+        ImGui.Image(_sceneTextureId, new System.Numerics.Vector2(800, 480));
+        ImGui.End();
+
+        _imGuiRenderer.AfterLayout();
         base.Draw(gameTime);
     }
-    
+
 }

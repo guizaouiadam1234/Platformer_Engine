@@ -233,7 +233,7 @@ namespace MyNewEngine.Entities
                 if (CurrentHealth <= 0)
                 {
                     CurrentHealth = MaxHealth;
-                    Position = new Vector2(100, 100);
+                    Position = new Vector2(-2, 96);
                     Velocity = Vector2.Zero;
                 }
             }
