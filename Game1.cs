@@ -38,6 +38,7 @@ public class Game1 : Game
     private ImGuiRenderer _imGuiRenderer;
     private RenderTarget2D _sceneRenderTarget;
     private IntPtr _sceneTextureId;
+    private Entity _selectedEntity = null;
 
     //font for text
     SpriteFont font1;
@@ -48,10 +49,9 @@ public class Game1 : Game
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
 
-        // --- CHANGER LA TAILLE DE LA FENÊTRE ---
-        _graphics.PreferredBackBufferWidth = 1280; // Largeur
-        _graphics.PreferredBackBufferHeight = 720; // Hauteur
-        _graphics.ApplyChanges(); // On applique les modifications !
+        _graphics.PreferredBackBufferWidth = 1280; 
+        _graphics.PreferredBackBufferHeight = 720; 
+        _graphics.ApplyChanges(); 
     }
 
     protected override void Initialize()
@@ -217,9 +217,7 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        // =======================================================
-        // TEMPS 1 : ON DESSINE LE JEU DANS NOTRE "FAUX ECRAN" (La Vue Scène)
-        // =======================================================
+        // scene view
         GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
         GraphicsDevice.Clear(Color.CornflowerBlue);
 
@@ -241,9 +239,22 @@ public class Game1 : Game
         _player.Draw(_spriteBatch);
         foreach (Enemy enemy in _enemies) { enemy.Draw(_spriteBatch); }
         foreach (Collectible collectible in _collectibles) { collectible.Draw(_spriteBatch); }
+
+        // highlight selected entity
+        if (_selectedEntity != null)
+        {
+            Rectangle highlight = new Rectangle(
+                (int)_selectedEntity.Position.X - 2,
+                (int)_selectedEntity.Position.Y - 2,
+                (int)_selectedEntity.Size.X + 4,
+                (int)_selectedEntity.Size.Y + 4);
+            _spriteBatch.Draw(_debugTexture, new Rectangle(highlight.X, highlight.Y, highlight.Width, 2), Color.Yellow);
+            _spriteBatch.Draw(_debugTexture, new Rectangle(highlight.X, highlight.Bottom - 2, highlight.Width, 2), Color.Yellow);
+            _spriteBatch.Draw(_debugTexture, new Rectangle(highlight.X, highlight.Y, 2, highlight.Height), Color.Yellow);
+            _spriteBatch.Draw(_debugTexture, new Rectangle(highlight.Right - 2, highlight.Y, 2, highlight.Height), Color.Yellow);
+        }
         _spriteBatch.End();
 
-        // --- DESSIN DE L'INTERFACE JOUEUR (SANS CAMERA) ---
         _spriteBatch.Begin();
         for (int i = 0; i < _player.CurrentHealth; i++)
         {
@@ -263,30 +274,97 @@ public class Game1 : Game
         _spriteBatch.End();
 
 
-        // =======================================================
-        // TEMPS 2 : ON DESSINE L'ÉDITEUR SUR LE VRAI ÉCRAN
-        // =======================================================
-        GraphicsDevice.SetRenderTarget(null); // Retour au vrai écran
-        GraphicsDevice.Clear(new Color(40, 44, 52)); // Fond gris foncé pro
+        // gui draw
+        GraphicsDevice.SetRenderTarget(null); 
+        GraphicsDevice.Clear(new Color(40, 44, 52)); // gray background for the GUI
 
         _imGuiRenderer.BeforeLayout(gameTime);
+        ImGui.DockSpaceOverViewport();
 
-        // --- FENÊTRE 1 : L'INSPECTEUR ---
+        //window 1 : inspector
         ImGui.Begin("Inspecteur");
-        ImGui.Text("--- Parametres du Joueur ---");
-        ImGui.SliderFloat("Vitesse", ref _player.Speed, 50f, 1000f);
-        ImGui.SliderFloat("Force de Saut", ref _player.JumpForce, -1500f, -200f);
-        ImGui.SliderFloat("Gravite", ref _player.Gravity, 100f, 3000f);
+        ImGui.SliderFloat("Camera Zoom", ref _camera.zoom, 0.25f, 3f);
         ImGui.Separator();
-        ImGui.Text("Pieces recoltees : " + _player.coins);
-        if (ImGui.Button("Soigner Banana Man")) { _player.CurrentHealth = _player.MaxHealth; }
+        if (_selectedEntity == null)
+        {
+            ImGui.TextDisabled("Nothing selected");
+        }
+        else if (_selectedEntity == _player)
+        {
+            ImGui.Text("--- Player ---");
+            ImGui.SliderFloat("Vitesse", ref _player.Speed, 50f, 1000f);
+            ImGui.SliderFloat("Force de Saut", ref _player.JumpForce, -1500f, -200f);
+            ImGui.SliderFloat("Gravite", ref _player.Gravity, 100f, 3000f);
+            ImGui.Separator();
+            ImGui.Text("Pieces recoltees : " + _player.coins);
+            if (ImGui.Button("Soigner")) { _player.CurrentHealth = _player.MaxHealth; }
+        }
+        else if (_selectedEntity is Enemy selectedEnemy)
+        {
+            ImGui.Text("--- Enemy ---");
+            ImGui.SliderFloat("Speed", ref selectedEnemy.Speed, 0f, 500f);
+            ImGui.SliderFloat("Gravity", ref selectedEnemy.Gravity, 100f, 3000f);
+            ImGui.Text("Position: (" + (int)selectedEnemy.Position.X + ", " + (int)selectedEnemy.Position.Y + ")");
+            ImGui.Separator();
+            if (ImGui.Button("Remove Enemy"))
+            {
+                _enemies.Remove(selectedEnemy);
+                _selectedEntity = null;
+            }
+        }
+        else if (_selectedEntity is Collectible selectedCollectible)
+        {
+            ImGui.Text("--- Collectible ---");
+            ImGui.Text("Type: " + selectedCollectible.Type.ToString());
+            ImGui.Text("Position: (" + (int)selectedCollectible.Position.X + ", " + (int)selectedCollectible.Position.Y + ")");
+        }
+        ImGui.Separator();
+        if (ImGui.Button("Add Enemy"))
+        {
+            Enemy newEnemy = new Enemy();
+            newEnemy.Position = new Vector2(_player.Position.X + 100, _player.Position.Y);
+            Texture2D toasterTex = Texture2D.FromFile(GraphicsDevice, "Assets/Toaster.png");
+            newEnemy.LoadContent(toasterTex);
+            _enemies.Add(newEnemy);
+        }
         ImGui.End();
 
-        // --- FENÊTRE 2 : LA VUE SCÈNE ---
-        ImGui.Begin("Vue Scene (Le Jeu)");
-        // On donne notre faux écran à ImGui pour qu'il l'affiche comme une image
+        // window 2 : scene view
+        ImGui.Begin("Scene View");
         _sceneTextureId = _imGuiRenderer.BindTexture(_sceneRenderTarget);
         ImGui.Image(_sceneTextureId, new System.Numerics.Vector2(800, 480));
+        ImGui.End();
+
+        //window 3 : scene hierarchy
+        ImGui.Begin("Scene Hierarchy");
+
+        if (ImGui.Selectable("Player", _selectedEntity == _player))
+            _selectedEntity = _player;
+
+        ImGui.Separator();
+
+        if (ImGui.TreeNode("Enemies (" + _enemies.Count + ")"))
+        {
+            foreach (Enemy enemy in _enemies)
+            {
+                string label = "Enemy (" + (int)enemy.Position.X + ", " + (int)enemy.Position.Y + ")";
+                if (ImGui.Selectable(label, _selectedEntity == enemy))
+                    _selectedEntity = enemy;
+            }
+            ImGui.TreePop();
+        }
+
+        if (ImGui.TreeNode("Collectibles (" + _collectibles.Count + ")"))
+        {
+            for (int i = 0; i < _collectibles.Count; i++)
+            {
+                string label = _collectibles[i].Type.ToString() + " #" + i;
+                if (ImGui.Selectable(label, _selectedEntity == _collectibles[i]))
+                    _selectedEntity = _collectibles[i];
+            }
+            ImGui.TreePop();
+        }
+
         ImGui.End();
 
         _imGuiRenderer.AfterLayout();
